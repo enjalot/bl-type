@@ -21,7 +21,7 @@ tags:
 
 Type with letters found in historic British Library book illustrations. Mix images, match a complete alphabet by style, normalize the ink, and export a PNG, SVG, or OTF font.
 
-**[Source code and instructions on GitHub](https://github.com/enjalot/bl-type)** · **[Open the app directly](https://enjalot-bl-type.hf.space/)**
+**[Source code and instructions on GitHub](https://github.com/enjalot/bl-type)** · **[Open the app directly](https://enjalot-bl-type.static.hf.space/)**
 
 The style explorer uses UMAP on letter-centered SigLIP embeddings. Selecting a reference shows its nearest match in every other letter, with explicit assignment and undo/redo. Automatic EVoC groups are exploratory suggestions, not identified historical typefaces. Retrieval candidates include incorrect letters; a small reviewed seed set supplies defaults.
 
@@ -29,4 +29,4 @@ The app runs entirely in your browser. This static Space serves the frontend and
 
 This is an independent experiment, not an official British Library product. Image provenance comes from Daniel van Strien's [British Library Book Images dataset](https://huggingface.co/datasets/biglam/british-library-book-images). Derived punctuation cuts are labelled in the inspector. Lowercase uses the uppercase image sets; vectorization traces the available 256 px thumbnails.
 
-Interface fonts retain their SIL Open Font License notices under `fonts/`. Bundled software notices are in [THIRD-PARTY-NOTICES.txt](https://enjalot-bl-type.hf.space/THIRD-PARTY-NOTICES.txt).
+Interface fonts retain their SIL Open Font License notices under `fonts/`. Bundled software notices are in [THIRD-PARTY-NOTICES.txt](https://enjalot-bl-type.static.hf.space/THIRD-PARTY-NOTICES.txt).

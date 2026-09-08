@@ -46,7 +46,7 @@ def main():
                                    delete_patterns=['assets/*', 'fonts/*'],
                                    commit_message='Publish BL Type static frontend with external GCS assets')
         receipt = {'space': f'https://huggingface.co/spaces/{REPO}',
-                   'app': 'https://enjalot-bl-type.hf.space/',
+                   'app': 'https://enjalot-bl-type.static.hf.space/',
                    'commit': commit.oid, 'frontendBytes': size, 'frontendFiles': len(files),
                    'assetRelease': json.loads((ROOT / 'deploy/asset-release.json').read_text())['release']}
         (ROOT / 'artifacts').mkdir(exist_ok=True)

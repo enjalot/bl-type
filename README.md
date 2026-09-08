@@ -2,7 +2,7 @@
 
 A local font playground built from the British Library images already processed for the basemap work. Type a sentence, shuffle historical initials, pin individual tiles, explore a letter-centered UMAP and EVoC style groups, and export the result.
 
-**[Open the app](https://enjalot-bl-type.hf.space/)** · **[Hugging Face Space](https://huggingface.co/spaces/enjalot/bl-type)** · **[GitHub source](https://github.com/enjalot/bl-type)**
+**[Open the app](https://enjalot-bl-type.static.hf.space/)** · **[Hugging Face Space](https://huggingface.co/spaces/enjalot/bl-type)** · **[GitHub source](https://github.com/enjalot/bl-type)**
 
 ## Run
 

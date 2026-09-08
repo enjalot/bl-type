@@ -6,7 +6,6 @@ colorTo: gray
 sdk: static
 app_file: index.html
 fullWidth: true
-header: mini
 short_description: Build an alphabet from historic British Library images
 datasets:
   - biglam/british-library-book-images

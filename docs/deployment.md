@@ -10,7 +10,7 @@ The application has no runtime backend. The Space is `sdk: static`; its compiled
 ## Verified publication — 2026-09-08
 
 - Public Static Space is running without requested compute hardware. HF static apps use the `.static.hf.space` hostname; `.hf.space` alone is not this app's endpoint.
-- Space deployment commit: `0ff171383be1b62e1f795eba7d855f091a12d039`.
+- Space deployment commit: `998fbddd010fee94dcade3a76eee22a45c607d99`.
 - Frontend: **546,580 bytes / 13 files**, excluding the Space card and HF-generated scaffold metadata.
 - GCS release `20260908a`: **420,039,649 bytes / 24,633 assets**, plus the checksummed manifest. Every upload succeeded with create-only semantics. Anonymous GETs verified all six runtime asset types with SHA-256, MIME type, and wildcard CORS checks.
 - The GitHub repository is public and contains no generated glyph/data directories. Its homepage, README, Space card, and app footer link the app and source together. A fresh GitHub clone builds the hosted profile without downloading the dataset.

@@ -1,0 +1,37 @@
+import {chromium,expect} from '@playwright/test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_PATH||'/home/enjalot/.cache/ms-playwright/chromium-1223/chrome-linux64/chrome',args:['--no-sandbox']});
+const page=await browser.newPage({viewport:{width:1440,height:1100}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
+await page.goto(process.env.BASE_URL||'http://gsv.local:5186');await page.waitForSelector('#style-map');await page.locator('.case').scrollIntoViewIfNeeded();
+await expect(page.locator('#map-status')).toContainText('4,659 visible');
+const pins=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('bl-type-v1')).pins);
+const initialPins=await pins();
+await page.locator('#style-map').scrollIntoViewIfNeeded();
+const mapPosition=await page.evaluate(async mapUrl=>{const m=await(await fetch(mapUrl)).json(),c=document.querySelector('#style-map'),r=c.getBoundingClientRect(),xy=m.coords.centered;const xs=xy.map(p=>p[0]),ys=xy.map(p=>p[1]),minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys),scale=Math.min((r.width-60)/(maxX-minX),(r.height-60)/(maxY-minY));return {x:r.left+(xy[0][0]-(minX+maxX)/2)*scale+r.width/2,y:r.top+(xy[0][1]-(minY+maxY)/2)*scale+r.height/2};},(process.env.ASSET_ORIGIN||'')+'/data/style-map.json');
+await page.mouse.move(mapPosition.x,mapPosition.y);await expect(page.locator('#map-tooltip')).toBeVisible();await expect(page.locator('#map-tooltip img')).toHaveAttribute('src',/glyphs\/\d+\.webp/);
+await page.locator('.map-layout').screenshot({path:'artifacts/style-map-hover.png'});
+await page.mouse.wheel(0,-120);await page.locator('#reset-map').click();
+const box=await page.locator('#style-map').boundingBox();await page.mouse.move(box.x+15,box.y+15);await page.mouse.down();await page.mouse.move(box.x+80,box.y+45,{steps:5});await page.mouse.up();assert.deepEqual(await pins(),initialPins,'Panning must not select or pin');await page.locator('#reset-map').click();
+
+await page.locator('#style-map').focus();await page.keyboard.press('ArrowRight');await expect(page.locator('#map-tooltip')).toBeVisible();await expect(page.locator('#map-tooltip img')).toHaveAttribute('src',/glyphs/);await page.keyboard.press('Enter');
+await expect(page.locator('.neighbor-card')).toHaveCount(25,{timeout:30000});assert.deepEqual(await pins(),initialPins,'Inspecting must not pin');
+await page.screenshot({path:'artifacts/style-map-selected.png',fullPage:true});
+const scoreText=await page.locator('.neighbor-preview span').first().textContent();
+await page.locator('#projection').selectOption('raw');await expect(page.locator('#map-legend')).toContainText('original');assert.equal(await page.locator('.neighbor-preview span').first().textContent(),scoreText,'Matching must remain in residual space');
+await page.locator('#projection').selectOption('centered');await page.locator('[data-letter-filter="B"]').click();await expect(page.locator('#map-status')).toContainText('letter B');assert.deepEqual(await pins(),initialPins,'Filtering must not pin');
+await page.locator('#reviewed-only').check();await expect(page.locator('.neighbor-card')).toHaveCount(25);await expect(page.locator('.neighbor-preview span').first()).toContainText('reviewed');
+await page.locator('.match-details > summary').click();await page.locator('[data-use-match]').first().click();assert.equal(Object.keys(await pins()).length,1);const kept={...await pins()};
+await page.locator('#use-matches').click();await expect.poll(async()=>Object.keys(await pins()).length).toBe(26);for(const [k,v]of Object.entries(kept))assert.equal((await pins())[k],v);
+await page.locator('#undo-use').click();assert.deepEqual(await pins(),kept);
+await page.locator('.neighbor-preview').first().click();await expect(page.locator('#use-tile')).toBeVisible();assert.deepEqual(await pins(),kept);
+await page.locator('#find-style').click();await expect(page.locator('.neighbor-card')).toHaveCount(25);
+await page.locator('.group-details summary').click();await page.locator('#group-filter').selectOption('-1');await page.locator('#group-layer').selectOption('2');await expect(page.locator('#group-filter')).toHaveValue('all');
+await page.locator('[data-letter-filter="all"]').click();await page.locator('#reviewed-only').uncheck();await page.locator('#zoom-in').click();await page.locator('#reset-map').click();
+await page.locator('#style-map').focus();await page.keyboard.press('ArrowRight');await expect(page.locator('#map-tooltip')).toBeVisible();
+// Mouse hover using the position of the keyboard-selected tooltip's point.
+const hoverData=await page.locator('#map-tooltip img').getAttribute('src');assert(hoverData.includes('/glyphs/'));
+await page.screenshot({path:'artifacts/style-map-desktop.png',fullPage:true});
+await page.setViewportSize({width:390,height:844});await page.locator('.case').scrollIntoViewIfNeeded();await page.screenshot({path:'artifacts/style-map-mobile.png',fullPage:true});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Mobile overflow');
+await page.locator('[data-tab="letters"]').click();await expect(page.locator('.alphabet-tile')).toHaveCount(61);await page.locator('[data-tab="styles"]').click();await expect(page.locator('#style-map')).toBeVisible();
+assert.deepEqual(errors,[]);console.log('PASS: map loading, preview, click/selection separation, full-space matches, projection toggle, letter/review/group filters, use, fill preserving pins, undo, neighbor inspection, zoom, mobile, tab lifecycle.');await browser.close();

@@ -1,0 +1,36 @@
+import { chromium, expect } from '@playwright/test';
+import fs from 'node:fs/promises';
+import assert from 'node:assert/strict';
+import opentype from 'opentype.js';
+const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_PATH||'/home/enjalot/.cache/ms-playwright/chromium-1223/chrome-linux64/chrome',args:['--no-sandbox']});
+const page=await browser.newPage({viewport:{width:1440,height:1100},deviceScaleFactor:1});const errors=[];page.on('pageerror',e=>errors.push(e.message));
+await page.goto(process.env.BASE_URL||'http://127.0.0.1:5186');await page.waitForSelector('.letter');await page.waitForTimeout(500);
+await page.screenshot({path:'artifacts/desktop.png',fullPage:true});
+await page.locator('#sentence').fill('aaa bbb');const before=await page.locator('.letter img').evaluateAll(els=>els.map(e=>e.src));
+await page.locator('#shuffle').click();assert.notDeepEqual(await page.locator('.letter img').evaluateAll(els=>els.map(e=>e.src)),before);
+await page.locator('.candidate').first().click();await page.locator('#use-tile').click();const pinned=await page.locator('.candidate.picked').getAttribute('data-id');await page.locator('#shuffle').click();
+for(const src of await page.locator('[data-letter="A"] img').evaluateAll(els=>els.map(e=>e.src)))assert(src.includes('/'+pinned+'.'));
+await page.locator('#letter-picker').selectOption('B');for(const src of await page.locator('[data-letter="A"] img').evaluateAll(els=>els.map(e=>e.src)))assert(src.includes('/'+pinned+'.'));
+await page.locator('#letter-picker').selectOption('A');await page.locator('#assignment').selectOption('alphabet');
+assert.equal(new Set(await page.locator('[data-letter="B"] img').evaluateAll(els=>els.map(e=>e.src))).size,1);
+await page.locator('#hide-tile').click();assert.equal(await page.locator('.candidate.picked').count(),0);await page.locator('[data-tab="letters"]').click();await page.locator('#restore-hidden').click();
+await page.locator('[data-preset="code"]').click();await page.locator('[data-mode="vector"]').click();await page.waitForTimeout(500);
+assert.equal(await page.locator('.fallback').count(),0);await page.screenshot({path:'artifacts/code-vector.png',fullPage:true});
+for(const [format,name] of [['svg','specimen.svg'],['png','specimen.png'],['otf','alphabet.otf']]){
+ await page.locator('#export-format').selectOption(format);const promise=page.waitForEvent('download');await page.locator('#export').click();const download=await promise;await download.saveAs('artifacts/'+name);assert((await fs.stat('artifacts/'+name)).size>1000);
+}
+const svg=await fs.readFile('artifacts/specimen.svg','utf8');assert(svg.includes('<path'));assert(!svg.includes('<image'));assert(!svg.includes('/glyphs/'));
+const fontBuffer=await fs.readFile('artifacts/alphabet.otf');const font=opentype.parse(fontBuffer.buffer.slice(fontBuffer.byteOffset,fontBuffer.byteOffset+fontBuffer.byteLength));
+for(const c of 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789()[]{}:;,!?')assert(font.charToGlyph(c).index>0,c);
+await page.locator('[data-mode="clean"]').click();await page.locator('#export-format').selectOption('png');let downloadPromise=page.waitForEvent('download');await page.locator('#export').click();await(await downloadPromise).saveAs('artifacts/paper-off.png');
+await page.locator('[data-mode="original"]').click();await page.locator('#export-format').selectOption('svg');downloadPromise=page.waitForEvent('download');await page.locator('#export').click();await(await downloadPromise).saveAs('artifacts/original.svg');assert((await fs.readFile('artifacts/original.svg','utf8')).includes('data:image/webp;base64,'));
+const savePromise=page.waitForEvent('download');await page.locator('#save').click();await(await savePromise).saveAs('artifacts/alphabet.json');await page.locator('#sentence').fill('changed');await page.locator('#file').setInputFiles('artifacts/alphabet.json');await expect(page.locator('#sentence')).toHaveValue(/const type/);
+await page.reload();await page.waitForSelector('.letter');await expect(page.locator('#sentence')).toHaveValue(/const type/);
+await page.locator('[data-tab="styles"]').click();await expect(page.locator('#style-map')).toBeVisible();await page.locator('[data-letter-filter="A"]').click();await page.screenshot({path:'artifacts/styles.png',fullPage:true});
+await page.locator('#about').click();await expect(page.locator('#notes')).toBeVisible();await page.keyboard.press('Escape');
+await page.setViewportSize({width:390,height:844});await page.locator('[data-tab="letters"]').click();await page.locator('[data-preset="pangram"]').click();await page.locator('#unlock-all').click();await page.locator('#letter-picker').selectOption('A');await page.screenshot({path:'artifacts/mobile.png',fullPage:true});
+assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Mobile overflow');
+await page.locator('#sentence').fill('<script>alert(1)</script> ☃');await expect(page.locator('#render-note')).toContainText('System-font fallback');assert.equal(await page.locator('#render script').count(),0);
+const broken=await page.locator('img').evaluateAll(els=>els.filter(e=>e.complete&&e.naturalWidth===0).map(e=>e.src));assert.deepEqual(broken,[]);assert.deepEqual(errors,[]);
+console.log('PASS: typing, shuffle, pins, style filters, hiding, all render modes, SVG/PNG/OTF exports, JSON round trip, persistence, style map, mobile layout, escaping.');
+await browser.close();

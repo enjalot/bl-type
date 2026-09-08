@@ -1,0 +1,14 @@
+node_modules/
+.venv/
+dist/
+*.log
+__pycache__/
+artifacts/
+# Generated datasets belong in object storage, outside the application repository.
+/public/glyphs/
+/public/data/
+/extraction/
+
+.env
+.env.*
+!.env.example

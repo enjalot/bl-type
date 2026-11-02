@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { choose, initialState, restore, candidates, glyphScale } from '../src/model.js';
+import { choose, initialState, restore, candidates, glyphScale, provenance, composition, sourceGroups, creditsText } from '../src/model.js';
 const catalog=JSON.parse(fs.readFileSync(new URL('../public/data/catalog.json',import.meta.url)));
 test('Every supported character has a usable reviewed seed and existing assets',()=>{
  for(const [c,hits] of Object.entries(catalog.sets)){
@@ -26,4 +26,20 @@ test('Imported files cannot introduce invalid pins or layout values',()=>{
 });
 test('Unsupported characters are explicit fallbacks; punctuation has appropriate scale',()=>{
  assert.equal(choose(catalog,'☃',0,initialState()),null);assert(glyphScale('.')<glyphScale(':'));assert(glyphScale(':')<glyphScale('A'));
+});
+test('Provenance parses BL filenames, Flickr ids and derived cuts',()=>{
+ const p=provenance(catalog.glyphs['509411']);
+ assert.equal(p.systemNumber,'002976927');assert.equal(p.page,84);assert.equal(p.imageIndex,2);assert.equal(p.year,'1896');assert.equal(p.title,'Every day Characters Illustrated by C Aldin');
+ assert.equal(p.flickrPage,'https://www.flickr.com/photos/britishlibrary/11141189943');assert(p.image.startsWith('https://'));
+ const cover=provenance(catalog.glyphs['10745']);assert.equal(cover.systemNumber,'000976439');assert.equal(cover.page,null);assert.equal(cover.title,'Caribbean Verses');assert.equal(cover.flickrPage,null);
+ const cut=provenance(catalog.glyphs['2000059']);assert(cut.derivation);assert.deepEqual(cut.sourceRows,[391136,297844]);
+ let parsed=0;for(const g of Object.values(catalog.glyphs)){const q=provenance(g);if(q.systemNumber)parsed++;assert.equal(Boolean(q.flickrPage),Boolean(g.source));}
+ assert.equal(parsed,Object.keys(catalog.glyphs).length);
+});
+test('Source groups follow specimen occurrence order and count repeats',()=>{
+ const s=initialState(),text='Aa b\nA';const comp=composition(catalog,text,s);
+ assert.deepEqual(comp.map(x=>x.index),[0,1,2,3]);assert.equal(comp[3].glyph.id,choose(catalog,'A',3,s).id);
+ const groups=sourceGroups(catalog,text,s);assert.equal(groups.tiles.reduce((n,t)=>n+t.count,0),4);
+ s.pins.A=catalog.reviewed.A[0];const pinned=sourceGroups(catalog,text,s).tiles.find(t=>t.glyph.id===s.pins.A);assert.equal(pinned.count,3);assert.deepEqual(pinned.chars,['A','a']);
+ assert.match(creditsText(catalog,groups),/British Library book images/);
 });
